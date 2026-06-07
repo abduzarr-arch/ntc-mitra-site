@@ -1,0 +1,8 @@
+meta:
+  environment: static_web
+  toolchain:
+    name: html
+build:
+  artifacts:
+    "*": /
+run: {}
