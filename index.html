@@ -21,6 +21,7 @@
         <a href="#problems">Проблемы на стройке</a>
         <a href="#cases">Кейсы</a>
         <a href="#geo">Геотехника</a>
+        <a href="about-ai.html">О компании</a>
         <a href="#contacts">Контакты</a>
       </nav>
       <a class="header-phone" href="tel:+79268637738">+7 926 863-77-38</a>
@@ -237,13 +238,61 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "EngineeringService",
-        "name": "НТЦ Митра",
-        "url": "https://ntc-mitra.ru",
-        "email": "i@rsa-project.ru",
-        "telephone": "+79268637738",
-        "areaServed": "RU",
-        "description": "Разработка раздела КР, расчеты несущих конструкций, геотехника, аудит КР, сопровождение СМР и проекты усиления."
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://ntc-mitra.ru/#organization",
+            "name": "НТЦ Митра",
+            "alternateName": "RSA Project",
+            "url": "https://ntc-mitra.ru",
+            "email": "i@rsa-project.ru",
+            "telephone": "+79268637738",
+            "areaServed": {
+              "@type": "Country",
+              "name": "Россия"
+            },
+            "knowsAbout": [
+              "разработка раздела КР",
+              "расчеты несущих конструкций",
+              "поверочные расчеты строительных конструкций",
+              "геотехнические расчеты",
+              "аудит конструктивных решений",
+              "сопровождение СМР",
+              "проекты усиления конструкций",
+              "расчеты при дефектах строительства",
+              "прогрессирующее обрушение",
+              "сейсмические расчеты"
+            ],
+            "description": "НТЦ Митра выполняет разработку раздела КР на стадиях ПД и РД, расчеты несущих конструкций, геотехнические расчеты, аудит КР, сопровождение СМР при дефектах и проекты усиления конструкций."
+          },
+          {
+            "@type": "EngineeringService",
+            "@id": "https://ntc-mitra.ru/#engineering-service",
+            "name": "Конструктивные расчеты, КР и геотехника",
+            "provider": {
+              "@id": "https://ntc-mitra.ru/#organization"
+            },
+            "url": "https://ntc-mitra.ru",
+            "serviceType": [
+              "Разработка КР ПД/РД",
+              "Поверочные расчеты конструкций",
+              "Геотехнические расчеты",
+              "Аудит КР",
+              "Сопровождение СМР",
+              "Проекты усиления конструкций"
+            ],
+            "areaServed": "RU"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://ntc-mitra.ru/#website",
+            "url": "https://ntc-mitra.ru",
+            "name": "НТЦ Митра",
+            "publisher": {
+              "@id": "https://ntc-mitra.ru/#organization"
+            }
+          }
+        ]
       }
     </script>
   </body>
