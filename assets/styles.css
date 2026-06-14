@@ -89,9 +89,23 @@ img {
 }
 
 .nav a:hover,
-.header-phone:hover,
+.header-contact a:hover,
 .footer a:hover {
   color: var(--accent);
+}
+
+.header-contact {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  min-width: 190px;
+}
+
+.header-email {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .header-phone {
@@ -627,8 +641,9 @@ h3 {
     min-width: 0;
   }
 
-  .header-phone {
+  .header-contact {
     width: 100%;
+    justify-items: start;
   }
 
   .metrics,
