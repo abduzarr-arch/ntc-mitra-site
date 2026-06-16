@@ -24,6 +24,12 @@
 - Трещины в конструкциях: https://ntc-mitra.ru/cracks-in-structures.html
 - Отклонения геометрии: https://ntc-mitra.ru/geometry-deviations.html
 - Сваи, осадки и крены: https://ntc-mitra.ru/piles-settlement-tilt.html
+- Техническое обоснование для управленческих решений: https://ntc-mitra.ru/legal-technical-context.html
+- Приостановка работ и расчетное обоснование: https://ntc-mitra.ru/legal-context/stop-works.html
+- Исполнительная документация при отклонениях: https://ntc-mitra.ru/legal-context/executive-documentation.html
+- Отклонения от проекта и технические риски: https://ntc-mitra.ru/legal-context/deviations-from-design.html
+- Дефекты СМР и ответственность подрядчика: https://ntc-mitra.ru/legal-context/defects-and-liability.html
+- Обоснование привлечения независимых инженеров: https://ntc-mitra.ru/legal-context/how-to-involve-engineers.html
 
 ## Контакты
 
