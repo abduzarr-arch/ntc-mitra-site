@@ -174,10 +174,6 @@ function markdownToAssistantHtml(markdown) {
 }
 
 function renderAssistantAnswer(payload) {
-  const meta = payload.meta
-    ? `<div class="assistant-meta">Модель черновика: ${escapeHtml(payload.meta.draft_provider || "n/a")} · Проверка: ${escapeHtml(payload.meta.verifier_provider || "n/a")}</div>`
-    : "";
-
   const answerHtml = markdownToAssistantHtml(payload.final_answer || "Ответ пуст.");
   const refineHtml = `
     <form class="assistant-refine" id="assistantRefineForm">
@@ -188,7 +184,7 @@ function renderAssistantAnswer(payload) {
       <button class="button ghost" type="submit">Уточнить ответ</button>
     </form>
   `;
-  return `${meta}<div class="assistant-answer">${answerHtml}</div>${refineHtml}`;
+  return `<div class="assistant-answer">${answerHtml}</div>${refineHtml}`;
 }
 
 if (assistantForm) {
