@@ -729,6 +729,21 @@ h3 {
   outline: 3px solid rgba(45, 86, 107, 0.16);
 }
 
+.assistant-refinement-note {
+  padding: 12px 14px;
+  border: 1px solid #d9e1e6;
+  background: #fbfcfd;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.assistant-item-note {
+  margin: 6px 0 0;
+  color: #53616d;
+  font-size: 0.96em;
+}
+
 .assistant-placeholder,
 .assistant-status {
   color: var(--muted);

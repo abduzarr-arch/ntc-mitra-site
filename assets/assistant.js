@@ -66,7 +66,8 @@ function normalizeAssistantMarkdown(value) {
     .replace(/\s+(\d+\.\s+[А-ЯA-ZЁ])/g, "\n\n$1")
     .replace(/\s+(\*\*[А-ЯA-ZЁ][^*]{2,80}:\*\*)/g, "\n\n$1")
     .replace(/\s+(-\s+[А-ЯA-ZЁ])/g, "\n$1")
-    .replace(/\s+(Шаг\s+\d+[:.])/gi, "\n\n$1");
+    .replace(/\s+(Шаг\s+\d+[:.])/gi, "\n\n$1")
+    .replace(/^\s*#{1,3}\s*$/gm, "");
 
   const requiredSections = [
     "## 1. Краткая квалификация ситуации",
@@ -79,7 +80,8 @@ function normalizeAssistantMarkdown(value) {
     "## 8. Уточняющие вопросы"
   ];
 
-  const hasSections = requiredSections.some((section) => text.includes(section));
+  const hasSections = requiredSections.some((section) => text.includes(section)) ||
+    /^#{0,3}\s*\d+\.\s+(Краткая|Что сделать|Пошаговый|Какие документы|Нормативные|Риски|Когда привлекать|Уточняющие)/im.test(text);
   if (!hasSections) {
     text = `## 1. Ответ помощника\n${text}`;
   }
@@ -107,6 +109,13 @@ function markdownToAssistantHtml(markdown) {
       html.push("</section>");
       currentSection = null;
     }
+  }
+
+  function appendToLastListItem(content) {
+    const lastIndex = html.length - 1;
+    if (lastIndex < 0 || !html[lastIndex].endsWith("</li>")) return false;
+    html[lastIndex] = html[lastIndex].replace("</li>", `<p class="assistant-item-note">${content}</p></li>`);
+    return true;
   }
 
   for (const rawLine of lines) {
@@ -161,6 +170,12 @@ function markdownToAssistantHtml(markdown) {
       continue;
     }
 
+    if (listType && /^\((основание|статус|примечание|важно|требуется)/i.test(line)) {
+      if (appendToLastListItem(renderInlineMarkdown(line))) {
+        continue;
+      }
+    }
+
     closeList();
     if (!currentSection) {
       currentSection = true;
@@ -173,8 +188,11 @@ function markdownToAssistantHtml(markdown) {
   return html.join("");
 }
 
-function renderAssistantAnswer(payload) {
+function renderAssistantAnswer(payload, options = {}) {
   const answerHtml = markdownToAssistantHtml(payload.final_answer || "Ответ пуст.");
+  const refinementNote = options.refinement
+    ? `<div class="assistant-refinement-note">Ответ актуализирован с учетом уточнения: ${escapeHtml(options.refinement)}</div>`
+    : "";
   const refineHtml = `
     <form class="assistant-refine" id="assistantRefineForm">
       <label>
@@ -184,7 +202,7 @@ function renderAssistantAnswer(payload) {
       <button class="button ghost" type="submit">Уточнить ответ</button>
     </form>
   `;
-  return `<div class="assistant-answer">${answerHtml}</div>${refineHtml}`;
+  return `${refinementNote}<div class="assistant-answer">${answerHtml}</div>${refineHtml}`;
 }
 
 if (assistantForm) {
@@ -270,7 +288,7 @@ if (assistantResult) {
         answer: payload.final_answer || "",
         last_refinement: refinement
       };
-      setAssistantResult(renderAssistantAnswer(payload));
+      setAssistantResult(renderAssistantAnswer(payload, { refinement }));
     } catch (error) {
       const note = document.createElement("p");
       note.className = "assistant-error";
