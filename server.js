@@ -51,6 +51,48 @@ function cleanUserInput(value) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, 6000);
 }
 
+function sanitizeAssistantAnswer(value) {
+  let text = String(value || "").trim();
+
+  text = text.replace(/```(?:json|yaml)?[\s\S]*?```/gi, (block) => {
+    const lower = block.toLowerCase();
+    if (
+      lower.includes("checked_claims") ||
+      lower.includes("original_claim") ||
+      lower.includes("source_requested") ||
+      lower.includes("overall_risk") ||
+      lower.includes("requires_human_review")
+    ) {
+      return "";
+    }
+    return block;
+  });
+
+  const serviceMarkers = [
+    "{ \"checked_claims\"",
+    "{\"checked_claims\"",
+    "\"checked_claims\"",
+    "\"original_claim\"",
+    "\"source_requested\"",
+    "\"overall_risk\"",
+    "\"requires_human_review\""
+  ];
+
+  const serviceIndex = serviceMarkers
+    .map((marker) => text.indexOf(marker))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+
+  if (serviceIndex >= 0) {
+    text = text.slice(0, serviceIndex).trim();
+  }
+
+  return text
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
+}
+
 async function callChatCompletions({ provider, apiKey, baseUrl, model, messages, temperature = 0.2 }) {
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
@@ -120,6 +162,8 @@ async function runVerifierAgent({ scenario, message, draft }) {
   const verifierInput = [
     "Проверь черновик. В этой версии прототипа retrieval-база нормативных документов еще не подключена.",
     "Поэтому все неподтвержденные точные ссылки должны быть помечены как требующие ручной проверки, а категоричные выводы смягчены.",
+    "Верни только финальный публичный ответ в Markdown. Не возвращай JSON, служебные claims и внутренний лог проверки.",
+    "Обязательно используй главы: 1. Краткая квалификация ситуации; 2. Что сделать прямо сейчас; 3. Пошаговый алгоритм; 4. Документы; 5. Нормативные основания; 6. Риски; 7. Когда привлекать НТЦ Митра; 8. Уточняющие вопросы.",
     "",
     `Тип ситуации: ${scenario}`,
     `Исходное описание: ${message}`,
@@ -179,7 +223,7 @@ async function handleAssistant(req, res) {
     const verified = await runVerifierAgent({ scenario, message, draft: draft.text });
 
     return sendJson(res, 200, {
-      final_answer: verified.text,
+      final_answer: sanitizeAssistantAnswer(verified.text),
       meta: {
         draft_provider: draft.provider,
         verifier_provider: verified.provider

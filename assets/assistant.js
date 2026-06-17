@@ -16,6 +16,161 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function renderInlineMarkdown(value) {
+  return escapeHtml(value)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`(.+?)`/g, "<code>$1</code>");
+}
+
+function stripServiceBlocks(value) {
+  let text = String(value || "").trim();
+  text = text.replace(/```(?:json|yaml)?[\s\S]*?```/gi, (block) => {
+    const lower = block.toLowerCase();
+    return lower.includes("checked_claims") ||
+      lower.includes("original_claim") ||
+      lower.includes("source_requested") ||
+      lower.includes("overall_risk") ||
+      lower.includes("requires_human_review")
+      ? ""
+      : block;
+  });
+
+  const markers = [
+    "\"checked_claims\"",
+    "\"original_claim\"",
+    "\"source_requested\"",
+    "\"overall_risk\"",
+    "\"requires_human_review\""
+  ];
+  const serviceIndex = markers
+    .map((marker) => text.indexOf(marker))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+
+  if (serviceIndex >= 0) {
+    text = text.slice(0, serviceIndex);
+  }
+
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizeAssistantMarkdown(value) {
+  let text = stripServiceBlocks(value);
+
+  text = text
+    .replace(/\s*---\s*##/g, "\n\n##")
+    .replace(/\s*#{2,3}\s*/g, "\n\n## ")
+    .replace(/\s+(\d+\.\s+[А-ЯA-ZЁ])/g, "\n\n$1")
+    .replace(/\s+(-\s+[А-ЯA-ZЁ])/g, "\n$1")
+    .replace(/\s+(Шаг\s+\d+[:.])/gi, "\n\n$1");
+
+  const requiredSections = [
+    "## 1. Краткая квалификация ситуации",
+    "## 2. Что сделать прямо сейчас",
+    "## 3. Пошаговый алгоритм",
+    "## 4. Какие документы оформить или запросить",
+    "## 5. Нормативные основания",
+    "## 6. Риски для участников",
+    "## 7. Когда привлекать НТЦ Митра",
+    "## 8. Уточняющие вопросы"
+  ];
+
+  const hasSections = requiredSections.some((section) => text.includes(section));
+  if (!hasSections) {
+    text = `## 1. Ответ помощника\n${text}`;
+  }
+
+  return text;
+}
+
+function markdownToAssistantHtml(markdown) {
+  const text = normalizeAssistantMarkdown(markdown);
+  const lines = text.split(/\r?\n/);
+  const html = [];
+  let currentSection = null;
+  let listType = null;
+
+  function closeList() {
+    if (listType) {
+      html.push(`</${listType}>`);
+      listType = null;
+    }
+  }
+
+  function closeSection() {
+    closeList();
+    if (currentSection) {
+      html.push("</section>");
+      currentSection = null;
+    }
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      continue;
+    }
+
+    const heading = line.match(/^#{2,3}\s+(.+)$/);
+    if (heading) {
+      closeSection();
+      currentSection = true;
+      html.push(`<section class="assistant-section"><h3>${renderInlineMarkdown(heading[1])}</h3>`);
+      continue;
+    }
+
+    const numberedHeading = line.match(/^(\d+)\.\s+(Краткая|Что сделать|Пошаговый|Какие документы|Нормативные|Риски|Когда привлекать|Уточняющие)(.+)$/i);
+    if (numberedHeading) {
+      closeSection();
+      currentSection = true;
+      html.push(`<section class="assistant-section"><h3>${renderInlineMarkdown(line)}</h3>`);
+      continue;
+    }
+
+    const ordered = line.match(/^(\d+)\.\s+(.+)$/);
+    if (ordered) {
+      if (listType !== "ol") {
+        closeList();
+        html.push("<ol>");
+        listType = "ol";
+      }
+      html.push(`<li>${renderInlineMarkdown(ordered[2])}</li>`);
+      continue;
+    }
+
+    const unordered = line.match(/^[-*]\s+(.+)$/);
+    if (unordered) {
+      if (listType !== "ul") {
+        closeList();
+        html.push("<ul>");
+        listType = "ul";
+      }
+      html.push(`<li>${renderInlineMarkdown(unordered[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+    if (!currentSection) {
+      currentSection = true;
+      html.push("<section class=\"assistant-section\">");
+    }
+    html.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  }
+
+  closeSection();
+  return html.join("");
+}
+
+function renderAssistantAnswer(payload) {
+  const meta = payload.meta
+    ? `<div class="assistant-meta">Модель черновика: ${escapeHtml(payload.meta.draft_provider || "n/a")} · Проверка: ${escapeHtml(payload.meta.verifier_provider || "n/a")}</div>`
+    : "";
+
+  const answerHtml = markdownToAssistantHtml(payload.final_answer || "Ответ пуст.");
+  return `${meta}<div class="assistant-answer">${answerHtml}</div>`;
+}
+
 if (assistantForm) {
   assistantForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -31,7 +186,7 @@ if (assistantForm) {
 
     const button = assistantForm.querySelector("button");
     button.disabled = true;
-    setAssistantResult("<p class=\"assistant-status\">Готовлю нормативный алгоритм и запускаю проверку ссылок...</p>");
+    setAssistantResult("<p class=\"assistant-status\">Готовлю нормативный алгоритм и проверяю ссылки...</p>");
 
     try {
       const response = await fetch("/api/normative-assistant", {
@@ -46,12 +201,7 @@ if (assistantForm) {
         throw new Error(payload.error || "Сервер помощника пока не подключен.");
       }
 
-      const answer = escapeHtml(payload.final_answer || "Ответ пуст.");
-      const meta = payload.meta
-        ? `<div class="assistant-meta">Модель черновика: ${escapeHtml(payload.meta.draft_provider || "n/a")} · Проверка: ${escapeHtml(payload.meta.verifier_provider || "n/a")}</div>`
-        : "";
-
-      setAssistantResult(`${meta}<div>${answer}</div>`);
+      setAssistantResult(renderAssistantAnswer(payload));
     } catch (error) {
       setAssistantResult(
         `<p class="assistant-error">Помощник пока не ответил.</p><p>${escapeHtml(error.message)}</p><p class="assistant-placeholder">Если сайт еще работает в static-режиме Amvera, нужно переключить проект на Node.js и добавить API-ключи в переменные окружения.</p>`,

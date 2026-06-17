@@ -593,7 +593,7 @@ h3 {
 
 .assistant-shell {
   display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
@@ -639,13 +639,59 @@ h3 {
 
 .assistant-result {
   align-content: start;
-  max-height: 720px;
+  max-height: 780px;
   overflow: auto;
-  white-space: pre-wrap;
+  line-height: 1.58;
 }
 
-.assistant-result h3 {
-  margin-bottom: 6px;
+.assistant-answer {
+  display: grid;
+  gap: 14px;
+}
+
+.assistant-section {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #d9e1e6;
+  background: #fbfcfd;
+}
+
+.assistant-section h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.assistant-section p {
+  margin: 0;
+  color: #33424c;
+}
+
+.assistant-section ol,
+.assistant-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+  color: #33424c;
+}
+
+.assistant-section li::marker {
+  color: var(--orange);
+  font-weight: 800;
+}
+
+.assistant-section strong {
+  color: var(--ink);
+}
+
+.assistant-section code {
+  padding: 2px 5px;
+  background: #eef3f4;
+  color: #223641;
+  font-size: 0.94em;
 }
 
 .assistant-placeholder,
@@ -663,6 +709,7 @@ h3 {
   background: var(--soft);
   color: var(--muted);
   font-size: 13px;
+  font-weight: 700;
 }
 
 @media (max-width: 1060px) {
