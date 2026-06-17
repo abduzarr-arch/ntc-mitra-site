@@ -1,0 +1,6 @@
+meta:
+  environment: nodejs
+  toolchain:
+    name: npm
+run:
+  command: npm start

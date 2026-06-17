@@ -29,12 +29,44 @@
     <main>
       <section class="page-hero">
         <div class="breadcrumbs"><a href="index.html">Главная</a><span>/</span><span>ИИ-помощник</span></div>
-        <p class="eyebrow">В разработке</p>
+        <p class="eyebrow">Прототип</p>
         <h1>Нормативный помощник ГИП/РП по дефектам СМР и отклонениям КР</h1>
         <p class="lead">Будущий AI-раздел НТЦ Митра будет помогать главным инженерам проектов и руководителям проектов разбирать порядок действий при отклонениях ПИР/СМР в части несущих конструкций: фиксация, документы, нормативные основания, риски и момент привлечения инженерной экспертизы.</p>
         <div class="hero-actions">
           <a class="button primary" href="index.html#contacts">Обсудить внедрение</a>
           <a class="button ghost" href="legal-technical-context.html">Смотреть раздел для ГИП/РП</a>
+        </div>
+      </section>
+
+      <section class="section band" id="assistant-demo">
+        <div class="section-head">
+          <p class="eyebrow">Проверочный сценарий</p>
+          <h2>Задайте ситуацию помощнику</h2>
+          <p>Опишите дефект или отклонение. Прототип сформирует нормативно-организационный алгоритм и отдельно отметит, где требуется ручная проверка ссылок и участие юриста/инженера.</p>
+        </div>
+        <div class="assistant-shell">
+          <form class="assistant-form" id="normativeAssistantForm">
+            <label>
+              <span>Тип ситуации</span>
+              <select name="scenario">
+                <option value="defect_smr">Дефект СМР несущих конструкций</option>
+                <option value="design_deviation">Отклонение от проектной документации</option>
+                <option value="survey_design_issue">Проблема ПИР / исходных данных</option>
+                <option value="concrete_strength">Недобор прочности бетона</option>
+                <option value="rebar_geometry">Арматура, геометрия, закладные</option>
+                <option value="foundation_geotech">Фундаменты, сваи, осадки, крены</option>
+              </select>
+            </label>
+            <label>
+              <span>Описание</span>
+              <textarea name="message" rows="8" required placeholder="Например: при обследовании плиты перекрытия выявлены пустоты, оголение арматуры и недобор прочности бетона. Подрядчик предлагает продолжать монолитные работы. Какие действия должен предпринять РП?"></textarea>
+            </label>
+            <button class="button primary" type="submit">Сформировать алгоритм</button>
+            <p class="form-note">Прототип работает только после подключения серверного endpoint и API-ключей на Amvera. Не вводите персональные данные и конфиденциальные документы.</p>
+          </form>
+          <div class="assistant-result" id="normativeAssistantResult" aria-live="polite">
+            <p class="assistant-placeholder">Здесь появится ответ помощника: квалификация ситуации, пошаговый алгоритм, документы, нормативные основания, риски и момент привлечения НТЦ Митра.</p>
+          </div>
         </div>
       </section>
 
@@ -85,5 +117,6 @@
       <p>© НТЦ Митра. Конструктивные решения, расчеты и геотехника.</p>
       <a href="index.html#top">На главную</a>
     </footer>
+    <script src="assets/assistant.js"></script>
   </body>
 </html>
