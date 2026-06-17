@@ -30,6 +30,7 @@
 - Отклонения от проекта и технические риски: https://ntc-mitra.ru/legal-context/deviations-from-design.html
 - Дефекты СМР и ответственность подрядчика: https://ntc-mitra.ru/legal-context/defects-and-liability.html
 - Обоснование привлечения независимых инженеров: https://ntc-mitra.ru/legal-context/how-to-involve-engineers.html
+- Нормативный помощник ГИП/РП по дефектам СМР и отклонениям КР: https://ntc-mitra.ru/ai-normative-assistant.html
 
 ## Контакты
 
