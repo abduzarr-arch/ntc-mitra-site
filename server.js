@@ -47,8 +47,8 @@ async function readJsonBody(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
 }
 
-function cleanUserInput(value) {
-  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 6000);
+function cleanUserInput(value, limit = 6000) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
 function sanitizeAssistantAnswer(value) {
@@ -120,14 +120,18 @@ async function callChatCompletions({ provider, apiKey, baseUrl, model, messages,
   return payload?.choices?.[0]?.message?.content || "";
 }
 
-async function runDraftAgent({ scenario, message }) {
+async function runDraftAgent({ scenario, message, previousAnswer, refinement }) {
   const userMessage = [
     `Тип ситуации: ${scenario}`,
     `Описание пользователя: ${message}`,
+    previousAnswer ? `Предыдущий ответ помощника: ${previousAnswer}` : "",
+    refinement ? `Уточнение пользователя: ${refinement}` : "",
     "",
-    "Сформируй черновой нормативно-организационный ответ и список claims для верификатора.",
+    refinement
+      ? "Сформируй обновленный нормативно-организационный ответ с учетом уточнения. Не повторяй прежний ответ механически: перестрой алгоритм, если уточнение меняет порядок действий."
+      : "Сформируй черновой нормативно-организационный ответ и список claims для верификатора.",
     "Не выдавай технический расчет. Не подтверждай нормы без проверки."
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   if (process.env.DEEPSEEK_API_KEY) {
     return {
@@ -166,20 +170,24 @@ async function runDraftAgent({ scenario, message }) {
   throw new Error("Не задан DEEPSEEK_API_KEY или OPENAI_API_KEY.");
 }
 
-async function runVerifierAgent({ scenario, message, draft }) {
+async function runVerifierAgent({ scenario, message, draft, previousAnswer, refinement }) {
   const verifierInput = [
     "Проверь черновик. В этой версии прототипа retrieval-база нормативных документов еще не подключена.",
     "Поэтому все неподтвержденные точные ссылки должны быть помечены как требующие ручной проверки, а категоричные выводы смягчены.",
     "Верни только финальный публичный ответ в Markdown. Не возвращай JSON, служебные claims и внутренний лог проверки.",
     "Не пиши весь ответ одной строкой. После каждого заголовка, пункта и подпункта ставь перенос строки.",
+    "В каждом пункте разделов 'Что сделать прямо сейчас' и 'Пошаговый алгоритм' указывай основание в скобках: '(основание: ...)' или '(основание требует ручной проверки: ...)'",
+    "Если точная статья, пункт СП или ГОСТ не подтверждены источником, не выдавай их как проверенные. Пиши: 'пункт требует ручной проверки актуальной редакции'.",
     "Обязательно используй главы: 1. Краткая квалификация ситуации; 2. Что сделать прямо сейчас; 3. Пошаговый алгоритм; 4. Документы; 5. Нормативные основания; 6. Риски; 7. Когда привлекать НТЦ Митра; 8. Уточняющие вопросы.",
     "",
     `Тип ситуации: ${scenario}`,
     `Исходное описание: ${message}`,
+    previousAnswer ? `Предыдущий ответ помощника: ${previousAnswer}` : "",
+    refinement ? `Уточнение пользователя: ${refinement}` : "",
     "",
     "Черновик агента 1:",
     draft
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   if (process.env.OPENAI_API_KEY) {
     return {
@@ -223,13 +231,15 @@ async function handleAssistant(req, res) {
     const body = await readJsonBody(req);
     const scenario = cleanUserInput(body.scenario || "defect_smr");
     const message = cleanUserInput(body.message);
+    const previousAnswer = cleanUserInput(body.previous_answer, 9000);
+    const refinement = cleanUserInput(body.refinement, 3000);
 
-    if (message.length < 20) {
+    if (message.length < 20 && refinement.length < 20) {
       return sendJson(res, 400, { error: "Опишите ситуацию подробнее: тип конструкции, дефект, стадия работ и что нужно решить." });
     }
 
-    const draft = await runDraftAgent({ scenario, message });
-    const verified = await runVerifierAgent({ scenario, message, draft: draft.text });
+    const draft = await runDraftAgent({ scenario, message, previousAnswer, refinement });
+    const verified = await runVerifierAgent({ scenario, message, draft: draft.text, previousAnswer, refinement });
 
     return sendJson(res, 200, {
       final_answer: sanitizeAssistantAnswer(verified.text),

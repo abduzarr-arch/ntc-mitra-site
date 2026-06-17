@@ -1,5 +1,6 @@
 const assistantForm = document.querySelector("#normativeAssistantForm");
 const assistantResult = document.querySelector("#normativeAssistantResult");
+let latestAssistantState = null;
 
 function setAssistantResult(html, className = "") {
   if (!assistantResult) return;
@@ -111,7 +112,6 @@ function markdownToAssistantHtml(markdown) {
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (!line) {
-      closeList();
       continue;
     }
 
@@ -179,7 +179,16 @@ function renderAssistantAnswer(payload) {
     : "";
 
   const answerHtml = markdownToAssistantHtml(payload.final_answer || "Ответ пуст.");
-  return `${meta}<div class="assistant-answer">${answerHtml}</div>`;
+  const refineHtml = `
+    <form class="assistant-refine" id="assistantRefineForm">
+      <label>
+        <span>Уточнить алгоритм</span>
+        <textarea name="refinement" rows="4" required placeholder="Например: дефект выявлен после бетонирования, акта скрытых работ пока нет, подрядчик просит разрешить продолжение работ. Уточните порядок действий с учетом этого факта."></textarea>
+      </label>
+      <button class="button ghost" type="submit">Уточнить ответ</button>
+    </form>
+  `;
+  return `${meta}<div class="assistant-answer">${answerHtml}</div>${refineHtml}`;
 }
 
 if (assistantForm) {
@@ -212,6 +221,11 @@ if (assistantForm) {
         throw new Error(payload.error || "Сервер помощника пока не подключен.");
       }
 
+      latestAssistantState = {
+        scenario,
+        message,
+        answer: payload.final_answer || ""
+      };
       setAssistantResult(renderAssistantAnswer(payload));
     } catch (error) {
       setAssistantResult(
@@ -220,6 +234,55 @@ if (assistantForm) {
       );
     } finally {
       button.disabled = false;
+    }
+  });
+}
+
+if (assistantResult) {
+  assistantResult.addEventListener("submit", async (event) => {
+    const refineForm = event.target.closest("#assistantRefineForm");
+    if (!refineForm) return;
+    event.preventDefault();
+
+    const refinement = String(new FormData(refineForm).get("refinement") || "").trim();
+    if (!refinement || !latestAssistantState) return;
+
+    const button = refineForm.querySelector("button");
+    button.disabled = true;
+    button.textContent = "Уточняю...";
+
+    try {
+      const response = await fetch("/api/normative-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenario: latestAssistantState.scenario,
+          message: latestAssistantState.message,
+          previous_answer: latestAssistantState.answer,
+          refinement
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Сервер помощника пока не подключен.");
+      }
+
+      latestAssistantState = {
+        ...latestAssistantState,
+        answer: payload.final_answer || "",
+        last_refinement: refinement
+      };
+      setAssistantResult(renderAssistantAnswer(payload));
+    } catch (error) {
+      const note = document.createElement("p");
+      note.className = "assistant-error";
+      note.textContent = `Не удалось уточнить ответ: ${error.message}`;
+      refineForm.append(note);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Уточнить ответ";
     }
   });
 }

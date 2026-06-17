@@ -694,6 +694,41 @@ h3 {
   font-size: 0.94em;
 }
 
+.assistant-refine {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #cfd9df;
+  background: #eef3f4;
+}
+
+.assistant-refine label {
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-refine span {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.assistant-refine textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border: 1px solid #c8d2da;
+  padding: 12px 13px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+.assistant-refine textarea:focus {
+  border-color: var(--steel);
+  outline: 3px solid rgba(45, 86, 107, 0.16);
+}
+
 .assistant-placeholder,
 .assistant-status {
   color: var(--muted);
