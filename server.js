@@ -88,6 +88,14 @@ function sanitizeAssistantAnswer(value) {
   }
 
   return text
+    .replace(/\s*---\s*/g, "\n\n")
+    .replace(/\s+(#{1,3}\s+)/g, "\n\n$1")
+    .replace(/^#\s+/gm, "## ")
+    .replace(/^#{3}\s+/gm, "## ")
+    .replace(/\s+(\d+\.\s+[А-ЯA-ZЁ])/g, "\n\n$1")
+    .replace(/\s+(\*\*[А-ЯA-ZЁ][^*]{2,80}:\*\*)/g, "\n\n$1")
+    .replace(/\s+(-\s+[А-ЯA-ZЁ])/g, "\n$1")
+    .replace(/\s+(Шаг\s+\d+[:.])/gi, "\n\n$1")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]+\n/g, "\n")
     .trim();
@@ -163,6 +171,7 @@ async function runVerifierAgent({ scenario, message, draft }) {
     "Проверь черновик. В этой версии прототипа retrieval-база нормативных документов еще не подключена.",
     "Поэтому все неподтвержденные точные ссылки должны быть помечены как требующие ручной проверки, а категоричные выводы смягчены.",
     "Верни только финальный публичный ответ в Markdown. Не возвращай JSON, служебные claims и внутренний лог проверки.",
+    "Не пиши весь ответ одной строкой. После каждого заголовка, пункта и подпункта ставь перенос строки.",
     "Обязательно используй главы: 1. Краткая квалификация ситуации; 2. Что сделать прямо сейчас; 3. Пошаговый алгоритм; 4. Документы; 5. Нормативные основания; 6. Риски; 7. Когда привлекать НТЦ Митра; 8. Уточняющие вопросы.",
     "",
     `Тип ситуации: ${scenario}`,
@@ -249,9 +258,12 @@ async function serveStatic(req, res) {
 
   const ext = path.extname(filePath).toLowerCase();
   const content = await readFile(filePath);
+  const cacheControl = [".html", ".js", ".css"].includes(ext)
+    ? "no-cache"
+    : "public, max-age=604800";
   res.writeHead(200, {
     "Content-Type": MIME[ext] || "application/octet-stream",
-    "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=604800"
+    "Cache-Control": cacheControl
   });
   res.end(content);
 }

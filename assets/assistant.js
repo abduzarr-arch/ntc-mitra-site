@@ -58,9 +58,12 @@ function normalizeAssistantMarkdown(value) {
   let text = stripServiceBlocks(value);
 
   text = text
-    .replace(/\s*---\s*##/g, "\n\n##")
-    .replace(/\s*#{2,3}\s*/g, "\n\n## ")
+    .replace(/\s*---\s*/g, "\n\n")
+    .replace(/\s+(#{1,3}\s+)/g, "\n\n$1")
+    .replace(/^#\s+/gm, "## ")
+    .replace(/^#{3}\s+/gm, "## ")
     .replace(/\s+(\d+\.\s+[А-ЯA-ZЁ])/g, "\n\n$1")
+    .replace(/\s+(\*\*[А-ЯA-ZЁ][^*]{2,80}:\*\*)/g, "\n\n$1")
     .replace(/\s+(-\s+[А-ЯA-ZЁ])/g, "\n$1")
     .replace(/\s+(Шаг\s+\d+[:.])/gi, "\n\n$1");
 
@@ -112,7 +115,7 @@ function markdownToAssistantHtml(markdown) {
       continue;
     }
 
-    const heading = line.match(/^#{2,3}\s+(.+)$/);
+    const heading = line.match(/^#{1,3}\s+(.+)$/);
     if (heading) {
       closeSection();
       currentSection = true;
@@ -125,6 +128,14 @@ function markdownToAssistantHtml(markdown) {
       closeSection();
       currentSection = true;
       html.push(`<section class="assistant-section"><h3>${renderInlineMarkdown(line)}</h3>`);
+      continue;
+    }
+
+    const boldHeading = line.match(/^\*\*([^*]{3,90}):\*\*$/);
+    if (boldHeading) {
+      closeSection();
+      currentSection = true;
+      html.push(`<section class="assistant-section"><h3>${renderInlineMarkdown(boldHeading[1])}</h3>`);
       continue;
     }
 
