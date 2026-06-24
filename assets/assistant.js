@@ -2,6 +2,10 @@ const assistantForm = document.querySelector("#normativeAssistantForm");
 const assistantResult = document.querySelector("#normativeAssistantResult");
 let latestAssistantState = null;
 
+function trackAssistantGoal(name, params = {}) {
+  window.mitraAnalytics?.goal(name, params);
+}
+
 function setAssistantResult(html, className = "") {
   if (!assistantResult) return;
   assistantResult.className = `assistant-result ${className}`.trim();
@@ -220,6 +224,7 @@ if (assistantForm) {
 
     const button = assistantForm.querySelector("button");
     button.disabled = true;
+    trackAssistantGoal("assistant_start", { scenario });
     setAssistantResult("<p class=\"assistant-status\">Готовлю нормативный алгоритм и проверяю ссылки...</p>");
 
     try {
@@ -240,8 +245,10 @@ if (assistantForm) {
         message,
         answer: payload.final_answer || ""
       };
+      trackAssistantGoal("assistant_answer", { scenario });
       setAssistantResult(renderAssistantAnswer(payload));
     } catch (error) {
+      trackAssistantGoal("assistant_error", { scenario });
       setAssistantResult(
         `<p class="assistant-error">Помощник пока не ответил.</p><p>${escapeHtml(error.message)}</p><p class="assistant-placeholder">Если сайт еще работает в static-режиме Amvera, нужно переключить проект на Node.js и добавить API-ключи в переменные окружения.</p>`,
         "assistant-error"
@@ -264,6 +271,9 @@ if (assistantResult) {
     const button = refineForm.querySelector("button");
     button.disabled = true;
     button.textContent = "Уточняю...";
+    trackAssistantGoal("assistant_refinement_start", {
+      scenario: latestAssistantState.scenario
+    });
 
     try {
       const response = await fetch("/api/normative-assistant", {
@@ -288,8 +298,14 @@ if (assistantResult) {
         answer: payload.final_answer || "",
         last_refinement: refinement
       };
+      trackAssistantGoal("assistant_refinement_answer", {
+        scenario: latestAssistantState.scenario
+      });
       setAssistantResult(renderAssistantAnswer(payload, { refinement }));
     } catch (error) {
+      trackAssistantGoal("assistant_refinement_error", {
+        scenario: latestAssistantState.scenario
+      });
       const note = document.createElement("p");
       note.className = "assistant-error";
       note.textContent = `Не удалось уточнить ответ: ${error.message}`;

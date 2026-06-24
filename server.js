@@ -25,6 +25,8 @@ const MIME = {
 
 const agent1Prompt = await readFile(path.join(__dirname, "prompts", "agent1_normative_consultant.md"), "utf8");
 const agent2Prompt = await readFile(path.join(__dirname, "prompts", "agent2_reference_verifier.md"), "utf8");
+const analyticsHead = '<script src="/assets/analytics.js?v=20260624-1"></script>';
+const analyticsFallback = '<noscript><div><img src="https://mc.yandex.ru/watch/110111752" style="position:absolute;left:-9999px" alt=""></div></noscript>';
 
 function sendJson(res, status, body) {
   res.writeHead(status, {
@@ -275,7 +277,15 @@ async function serveStatic(req, res) {
   }
 
   const ext = path.extname(filePath).toLowerCase();
-  const content = await readFile(filePath);
+  let content = await readFile(filePath);
+  if (ext === ".html") {
+    let html = content.toString("utf8");
+    if (!html.includes("/assets/analytics.js")) {
+      html = html.replace("</head>", `  ${analyticsHead}\n  </head>`);
+      html = html.replace("<body>", `<body>\n    ${analyticsFallback}`);
+    }
+    content = Buffer.from(html, "utf8");
+  }
   const cacheControl = [".html", ".js", ".css"].includes(ext)
     ? "no-cache"
     : "public, max-age=604800";
