@@ -637,6 +637,28 @@ h3 {
   outline: 3px solid rgba(45, 86, 107, 0.16);
 }
 
+.assistant-form .assistant-consent {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.assistant-consent input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--orange);
+}
+
+.assistant-form .assistant-consent span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .assistant-result {
   align-content: start;
   max-height: 780px;

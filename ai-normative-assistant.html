@@ -61,8 +61,11 @@
               <span>Описание</span>
               <textarea name="message" rows="8" required placeholder="Например: при обследовании плиты перекрытия выявлены пустоты, оголение арматуры и недобор прочности бетона. Подрядчик предлагает продолжать монолитные работы. Какие действия должен предпринять РП?"></textarea>
             </label>
+            <label class="assistant-consent">
+              <input type="checkbox" name="consent" required>
+              <span>Согласен на сохранение запроса и ответа для анализа и улучшения помощника. Не указывайте персональные данные, коммерческую тайну и конфиденциальные сведения об объекте.</span>
+            </label>
             <button class="button primary" type="submit">Сформировать алгоритм</button>
-            <p class="form-note">Не вводите персональные данные и конфиденциальные документы.</p>
           </form>
           <div class="assistant-result" id="normativeAssistantResult" aria-live="polite">
             <p class="assistant-placeholder">Здесь появится ответ помощника: квалификация ситуации, пошаговый алгоритм, документы, нормативные основания, риски и момент привлечения НТЦ Митра.</p>
@@ -117,6 +120,6 @@
       <p>© НТЦ Митра. Конструктивные решения, расчеты и геотехника.</p>
       <a href="index.html#top">На главную</a>
     </footer>
-    <script src="assets/assistant.js?v=20260617-5"></script>
+    <script src="assets/assistant.js?v=20260625-1"></script>
   </body>
 </html>

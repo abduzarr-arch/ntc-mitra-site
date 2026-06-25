@@ -216,9 +216,14 @@ if (assistantForm) {
     const data = new FormData(assistantForm);
     const message = String(data.get("message") || "").trim();
     const scenario = String(data.get("scenario") || "defect_smr");
+    const consent = data.get("consent") === "on";
 
     if (!message) {
       setAssistantResult("<p class=\"assistant-error\">Опишите ситуацию перед отправкой.</p>", "assistant-error");
+      return;
+    }
+    if (!consent) {
+      setAssistantResult("<p class=\"assistant-error\">Подтвердите согласие на сохранение диалога.</p>", "assistant-error");
       return;
     }
 
@@ -231,7 +236,7 @@ if (assistantForm) {
       const response = await fetch("/api/normative-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario, message })
+        body: JSON.stringify({ scenario, message, consent })
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -243,7 +248,8 @@ if (assistantForm) {
       latestAssistantState = {
         scenario,
         message,
-        answer: payload.final_answer || ""
+        answer: payload.final_answer || "",
+        conversationId: payload.conversation_id || ""
       };
       trackAssistantGoal("assistant_answer", { scenario });
       setAssistantResult(renderAssistantAnswer(payload));
@@ -283,7 +289,9 @@ if (assistantResult) {
           scenario: latestAssistantState.scenario,
           message: latestAssistantState.message,
           previous_answer: latestAssistantState.answer,
-          refinement
+          refinement,
+          conversation_id: latestAssistantState.conversationId,
+          consent: true
         })
       });
 
@@ -296,6 +304,7 @@ if (assistantResult) {
       latestAssistantState = {
         ...latestAssistantState,
         answer: payload.final_answer || "",
+        conversationId: payload.conversation_id || latestAssistantState.conversationId,
         last_refinement: refinement
       };
       trackAssistantGoal("assistant_refinement_answer", {

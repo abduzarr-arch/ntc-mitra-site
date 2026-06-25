@@ -3,6 +3,15 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  appendDialogEntry,
+  createConversationId,
+  isAdminAuthorized,
+  readDialogEntries,
+  renderDialogsCsv,
+  renderDialogsPage,
+  requestAdminAuth
+} from "./dialog-log.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -238,9 +247,14 @@ async function handleAssistant(req, res) {
     const message = cleanUserInput(body.message);
     const previousAnswer = cleanUserInput(body.previous_answer, 9000);
     const refinement = cleanUserInput(body.refinement, 3000);
+    const consent = body.consent === true;
+    const conversationId = createConversationId(body.conversation_id);
 
     if (message.length < 20 && refinement.length < 20) {
       return sendJson(res, 400, { error: "Опишите ситуацию подробнее: тип конструкции, дефект, стадия работ и что нужно решить." });
+    }
+    if (!consent) {
+      return sendJson(res, 400, { error: "Для отправки запроса подтвердите согласие на сохранение диалога." });
     }
 
     const draft = await runDraftAgent({ scenario, message, previousAnswer, refinement });
@@ -251,8 +265,23 @@ async function handleAssistant(req, res) {
       throw new Error("Помощник вернул неполный ответ. Попробуйте уточнить запрос или повторить отправку.");
     }
 
+    try {
+      await appendDialogEntry({
+        conversation_id: conversationId,
+        scenario,
+        message,
+        refinement,
+        answer: finalAnswer,
+        draft_provider: draft.provider,
+        verifier_provider: verified.provider
+      });
+    } catch (logError) {
+      console.error("Failed to write assistant dialog log:", logError);
+    }
+
     return sendJson(res, 200, {
       final_answer: finalAnswer,
+      conversation_id: conversationId,
       meta: {
         draft_provider: draft.provider,
         verifier_provider: verified.provider
@@ -297,8 +326,42 @@ async function serveStatic(req, res) {
 }
 
 createServer(async (req, res) => {
-  if (req.method === "POST" && req.url === "/api/normative-assistant") {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  if (req.method === "POST" && url.pathname === "/api/normative-assistant") {
     await handleAssistant(req, res);
+    return;
+  }
+
+  if (req.method === "GET" && ["/admin/dialogs", "/admin/dialogs.csv"].includes(url.pathname)) {
+    if (!process.env.ADMIN_LOG_TOKEN) {
+      res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+      res.end("Не задана переменная ADMIN_LOG_TOKEN.");
+      return;
+    }
+    if (!isAdminAuthorized(req)) {
+      requestAdminAuth(res);
+      return;
+    }
+
+    const entries = await readDialogEntries();
+    if (url.pathname.endsWith(".csv")) {
+      res.writeHead(200, {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": 'attachment; filename="ntc-mitra-dialogs.csv"',
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex, nofollow"
+      });
+      res.end(renderDialogsCsv(entries));
+      return;
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow"
+    });
+    res.end(renderDialogsPage(entries));
     return;
   }
 
