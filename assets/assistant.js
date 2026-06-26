@@ -12,6 +12,36 @@ function setAssistantResult(html, className = "") {
   assistantResult.innerHTML = html;
 }
 
+function setButtonBusy(button, isBusy, busyText, idleText) {
+  if (!button) return;
+  button.disabled = isBusy;
+  button.textContent = isBusy ? busyText : idleText;
+}
+
+function renderAssistantLoading(mode = "initial") {
+  const title = mode === "refinement"
+    ? "Уточнение принято. Помощник обновляет алгоритм"
+    : "Запрос принят. Помощник формирует алгоритм";
+  const description = mode === "refinement"
+    ? "Сейчас учитываем ваше уточнение, заново структурируем ответ и проверяем нормативные основания."
+    : "Обычно это занимает немного времени: первый контур готовит алгоритм, затем второй контур проверяет ссылки и формулировки.";
+
+  return `
+    <div class="assistant-loading" role="status" aria-live="polite">
+      <div class="assistant-loading-indicator" aria-hidden="true"></div>
+      <div>
+        <h3>${title}</h3>
+        <p>${description}</p>
+        <ol>
+          <li>Квалифицируем ситуацию.</li>
+          <li>Собираем пошаговый порядок действий.</li>
+          <li>Проверяем нормативные основания.</li>
+        </ol>
+      </div>
+    </div>
+  `;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -228,9 +258,9 @@ if (assistantForm) {
     }
 
     const button = assistantForm.querySelector("button");
-    button.disabled = true;
+    setButtonBusy(button, true, "Алгоритм формируется...", "Сформировать алгоритм");
     trackAssistantGoal("assistant_start", { scenario });
-    setAssistantResult("<p class=\"assistant-status\">Готовлю нормативный алгоритм и проверяю ссылки...</p>");
+    setAssistantResult(renderAssistantLoading(), "assistant-result-loading");
 
     try {
       const response = await fetch("/api/normative-assistant", {
@@ -260,7 +290,7 @@ if (assistantForm) {
         "assistant-error"
       );
     } finally {
-      button.disabled = false;
+      setButtonBusy(button, false, "Алгоритм формируется...", "Сформировать алгоритм");
     }
   });
 }
@@ -275,8 +305,9 @@ if (assistantResult) {
     if (!refinement || !latestAssistantState) return;
 
     const button = refineForm.querySelector("button");
-    button.disabled = true;
-    button.textContent = "Уточняю...";
+    setButtonBusy(button, true, "Уточняю алгоритм...", "Уточнить ответ");
+    const previousHtml = assistantResult.innerHTML;
+    setAssistantResult(renderAssistantLoading("refinement"), "assistant-result-loading");
     trackAssistantGoal("assistant_refinement_start", {
       scenario: latestAssistantState.scenario
     });
@@ -315,13 +346,14 @@ if (assistantResult) {
       trackAssistantGoal("assistant_refinement_error", {
         scenario: latestAssistantState.scenario
       });
+      assistantResult.innerHTML = previousHtml;
+      const restoredRefineForm = assistantResult.querySelector("#assistantRefineForm");
       const note = document.createElement("p");
       note.className = "assistant-error";
       note.textContent = `Не удалось уточнить ответ: ${error.message}`;
-      refineForm.append(note);
+      (restoredRefineForm || assistantResult).append(note);
     } finally {
-      button.disabled = false;
-      button.textContent = "Уточнить ответ";
+      setButtonBusy(button, false, "Уточняю алгоритм...", "Уточнить ответ");
     }
   });
 }
